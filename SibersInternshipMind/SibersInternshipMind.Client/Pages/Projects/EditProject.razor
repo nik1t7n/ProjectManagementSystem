@@ -1,0 +1,204 @@
+﻿@page "/editproject"
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@rendermode RenderMode.InteractiveServer
+
+<h3>Edit Project</h3>
+
+@if (projects == null)
+{
+    <p>Loading projects...</p>
+}
+else
+{
+    <div class="form-group mb-2">
+        <label for="selectProject">Select a project to edit:</label>
+        <select id="selectProject" @bind="selectedProjectId" class="form-control" @oninput="OnProjectSelected">
+            @foreach (var project in projects)
+            {
+                <option value="@project.Id">@project.Name (ID: @project.Id)</option>
+            }
+        </select>
+    </div>
+
+    @if (selectedProject != null)
+    {
+        <EditForm Model="@selectedProject" OnValidSubmit="HandleSubmit">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="form-group mb-2">
+                <label for="name">Name</label>
+                <InputText id="name" class="form-control" @bind-Value="selectedProject.Name" @oninput="HandleFieldChanged" pattern="^[a-zA-Z0-9 ]+$" />
+            </div>
+
+            <div class="form-group mb-2">
+                <label for="clientCompany">Client Company</label>
+                <InputText id="clientCompany" class="form-control" @bind-Value="selectedProject.ClientCompany" @oninput="HandleFieldChanged" pattern="^[a-zA-Z0-9 ]+$" />
+            </div>
+
+            <div class="form-group mb-2">
+                <label for="vendorCompany">Vendor Company</label>
+                <InputText id="vendorCompany" class="form-control" @bind-Value="selectedProject.VendorCompany" @oninput="HandleFieldChanged" pattern="^[a-zA-Z0-9 ]+$" />
+            </div>
+
+            <div class="form-group mb-2">
+                <label for="managerId">Manager</label>
+                <select id="managerId" class="form-control" @bind="selectedProject.ManagerId" @oninput="HandleFieldChanged">
+                    <option value="">-- Select Manager --</option>
+                    @foreach (var employee in Employees)
+                    {
+                        <option value="@employee.Id">@($"{employee.FirstName} {employee.Surname}")</option>
+                    }
+                </select>
+            </div>
+
+            <div class="form-group mb-2">
+                <label for="startDate">Start Date</label>
+                <InputDate id="startDate" class="form-control" @bind-Value="selectedProject.StartDate" @oninput="HandleFieldChanged" />
+            </div>
+
+            <div class="form-group mb-2">
+                <label for="endDate">End Date</label>
+                <InputDate id="endDate" class="form-control" @bind-Value="selectedProject.EndDate" @oninput="HandleFieldChanged" />
+            </div>
+
+            <div class="form-group">
+                <label for="priority">Priority</label>
+                <InputNumber id="priority" class="form-control" @bind-Value="selectedProject.Priority" min="0" @oninput="HandleFieldChanged" />
+            </div>
+
+            <button type="submit" class="btn btn-primary mt-3 mb-3 shadow" disabled="@(!projectChanged)">Save</button>
+            @if (!projectChanged)
+            {
+                <p style="color: #7469B6;">You cannot click the "Save" button because you have not changed anything yet ^_^</p>
+            }
+        </EditForm>
+    }
+}
+
+@code {
+    private List<Project> projects;
+    private int selectedProjectId;
+    private Project selectedProject;
+    private Project originalProject;
+    private List<Employee> Employees = new List<Employee>();
+    private bool projectChanged = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Fetch existing projects from the server
+        projects = await Http.GetFromJsonAsync<List<Project>>("api/Project/Get");
+
+        // Fetch existing employees to populate the manager dropdown
+        Employees = await Http.GetFromJsonAsync<List<Employee>>("api/Employee/GetAll");
+
+        // Initialize selectedProjectId with the first project in the list
+        if (projects != null && projects.Count > 0)
+        {
+            selectedProjectId = projects[0].Id;
+            await LoadSelectedProject();
+        }
+    }
+
+    private async Task LoadSelectedProject()
+    {
+        // Fetch selected project from the server
+        selectedProject = await Http.GetFromJsonAsync<Project>($"api/Project/GetById/{selectedProjectId}");
+        originalProject = new Project
+            {
+                Id = selectedProject.Id,
+                Name = selectedProject.Name,
+                ClientCompany = selectedProject.ClientCompany,
+                VendorCompany = selectedProject.VendorCompany,
+                ManagerId = selectedProject.ManagerId,
+                StartDate = selectedProject.StartDate,
+                EndDate = selectedProject.EndDate,
+                Priority = selectedProject.Priority
+            };
+        projectChanged = false;
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (projectChanged)
+        {
+            var response = await Http.PutAsJsonAsync($"api/Project/Update/{selectedProjectId}", selectedProject);
+            var result = await response.Content.ReadAsStringAsync();
+
+            if (response.IsSuccessStatusCode)
+            {
+                NavigationManager.NavigateTo("/projects");
+            }
+            else
+            {
+                Console.WriteLine(response);
+                NavigationManager.NavigateTo("/Error");
+            }
+        }
+    }
+
+    private async Task OnProjectSelected(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value.ToString(), out int projectId))
+        {
+            selectedProjectId = projectId;
+            await LoadSelectedProject();
+        }
+    }
+
+    private void HandleFieldChanged(ChangeEventArgs e)
+    {
+        projectChanged = true;
+
+        // Here we update the selected project whenever any field value changes
+        // This will automatically reflect the changes in the selectedProject object
+        switch (e.Value.ToString())
+        {
+            case "name":
+                selectedProject.Name = e.Value.ToString();
+                break;
+            case "clientCompany":
+                selectedProject.ClientCompany = e.Value.ToString();
+                break;
+            case "vendorCompany":
+                selectedProject.VendorCompany = e.Value.ToString();
+                break;
+            case "managerId":
+                if (int.TryParse(e.Value.ToString(), out int managerId))
+                {
+                    selectedProject.ManagerId = managerId;
+                }
+                break;
+            case "startDate":
+                if (DateTime.TryParse(e.Value.ToString(), out DateTime startDate))
+                {
+                    selectedProject.StartDate = startDate;
+                }
+                break;
+            case "endDate":
+                if (DateTime.TryParse(e.Value.ToString(), out DateTime endDate))
+                {
+                    selectedProject.EndDate = endDate;
+                }
+                break;
+            case "priority":
+                if (int.TryParse(e.Value.ToString(), out int priority))
+                {
+                    if (priority >= 0)
+                    {
+                        selectedProject.Priority = priority;
+                    }
+                    else
+                    {
+                        // Preventing input of negative values
+                        selectedProject.Priority = 0;
+                    }
+                }
+                break;
+            default:
+                // Handle other field changes if necessary
+                break;
+        }
+    }
+}

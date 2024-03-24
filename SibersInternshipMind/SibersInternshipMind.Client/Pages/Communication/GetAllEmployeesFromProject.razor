@@ -1,0 +1,114 @@
+﻿@page "/getallemployeesfromproject"
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@rendermode RenderMode.InteractiveServer
+
+<h3 class="mb-3">Employees from Project</h3>
+
+<div class="form-group mb-3">
+    <label for="selectProject">Select Project:</label>
+    <select id="selectProject" class="form-control" @bind="SelectedProjectId" @oninput="LoadEmployeesForProjectFunc">
+        <option value="0">-- Select Project --</option>
+        @foreach (var project in Projects)
+        {
+            <option value="@project.Id">@project.Name (ID: @project.Id)</option>
+        }
+    </select>
+</div>
+
+@if (SelectedProjectId != 0)
+{
+    <div class="mb-3">
+        <h4>Project Manager: @ProjectManagerName</h4>
+    </div>
+
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Employee ID</th>
+                <th>Name</th>
+                <th>Surname</th>
+                <th>Email</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var employee in Employees)
+            {
+                <tr>
+                    <td>@employee.Id</td>
+                    <td>@employee.FirstName</td>
+                    <td>@employee.Surname</td>
+                    <td>@employee.Email</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Project> Projects = new List<Project>();
+    private List<Employee> Employees = new List<Employee>();
+    private int SelectedProjectId { get; set; }
+    private string ProjectManagerName { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProjects();
+    }
+
+    private async Task LoadProjects()
+    {
+        Projects = await Http.GetFromJsonAsync<List<Project>>("/api/Project/Get");
+    }
+
+    private async Task LoadEmployeesForProjectFunc(ChangeEventArgs e)
+    {
+        SelectedProjectId = Convert.ToInt32(e.Value);
+        await LoadEmployees();
+        await LoadProjectManager();
+    }
+
+    private async Task LoadEmployees()
+    {
+        Employees = await Http.GetFromJsonAsync<List<Employee>>($"/api/communication/GetAllEmployeesFromProject?projectId={SelectedProjectId}");
+    }
+
+    private async Task LoadProjectManager()
+    {
+        var selectedProject = Projects.FirstOrDefault(p => p.Id == SelectedProjectId);
+        if (selectedProject != null)
+        {
+            var managerId = selectedProject.ManagerId;
+            if (managerId != 0)
+            {
+                var projectManagerResponse = await Http.GetAsync($"/api/Employee/GetById/{managerId}");
+                if (projectManagerResponse.IsSuccessStatusCode)
+                {
+                    var projectManager = await projectManagerResponse.Content.ReadFromJsonAsync<Employee>();
+                    if (projectManager != null)
+                    {
+                        ProjectManagerName = $"{projectManager.FirstName} {projectManager.Surname}";
+                    }
+                    else
+                    {
+                        ProjectManagerName = "Not Assigned"; // Присваиваем "Not Assigned", если менеджер не найден
+                    }
+                }
+                else
+                {
+                    ProjectManagerName = "Error Loading Manager"; // Присваиваем "Error Loading Manager", если запрос к API завершился неудачно
+                }
+            }
+            else
+            {
+                ProjectManagerName = "Not Assigned";
+            }
+        }
+        else
+        {
+            ProjectManagerName = "Project Not Found";
+        }
+    }
+
+
+}

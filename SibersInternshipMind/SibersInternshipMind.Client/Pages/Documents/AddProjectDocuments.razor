@@ -1,0 +1,87 @@
+﻿@page "/projectdocuments"
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@rendermode RenderMode.InteractiveServer
+@using System.IO
+
+<h3 class="mt-4 mb-3">Project Documents</h3>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="form-group">
+            <label for="selectProject">Select a project:</label>
+            <select id="selectProject" @bind="selectedProjectId" class="form-control">
+                <option value="0">-- Select Project --</option>
+                @foreach (var project in projects)
+                {
+                    <option value="@project.Id">@project.Name</option>
+                }
+            </select>
+        </div>
+
+        @if (selectedProjectId != 0)
+        {
+            <div class="form-group mt-3 mb-3">
+                <label for="fileInput"><strong>Upload Document</strong> (You can Drag and Drop):</label>
+                <InputFile OnChange="HandleFileSelected" multiple class="form-control-file" />
+            </div>
+
+            @if (selectedFile != null)
+            {
+                <div class="bg-light p-3 mb-3 rounded">
+                    <p class="mb-1"><strong>Selected File:</strong> @selectedFile.Name</p>
+
+                    <p class="mb-1"><strong>File Type:</strong> @selectedFile.ContentType</p>
+                    <button class="btn btn-primary shadow" @onclick="UploadDocument">Upload</button>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@code {
+    private List<Project> projects = new List<Project>();
+    private int selectedProjectId;
+    private IBrowserFile selectedFile;
+
+    protected override async Task OnInitializedAsync()
+    {
+        projects = await Http.GetFromJsonAsync<List<Project>>("/api/Project/Get");
+    }
+
+    private void HandleFileSelected(InputFileChangeEventArgs e)
+    {
+        selectedFile = e.File;
+    }
+
+    private async Task UploadDocument()
+    {
+        using var ms = new MemoryStream();
+        await selectedFile.OpenReadStream().CopyToAsync(ms);
+
+        // Generate a unique file name
+        var fileName = Guid.NewGuid().ToString() + "_" + selectedFile.Name;
+
+        // Get the full path of the file
+        var fullPath = Path.GetFullPath(fileName);
+
+        var documentDto = new DocumentDTO
+            {
+                Name = selectedFile.Name,
+                FilePath = fullPath, // Use the full path
+                FileType = selectedFile.ContentType,
+                ProjectId = selectedProjectId
+            };
+
+        var response = await Http.PostAsJsonAsync("/api/Document/Add", documentDto);
+
+        if (response.IsSuccessStatusCode)
+        {
+            NavigationManager.NavigateTo("/documentaddedsuccess");
+        }
+        else
+        {
+            NavigationManager.NavigateTo("/documentaddederror");
+        }
+    }
+}

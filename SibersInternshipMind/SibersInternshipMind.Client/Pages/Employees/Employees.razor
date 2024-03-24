@@ -1,0 +1,165 @@
+﻿@page "/employees"
+@inject HttpClient Http
+@rendermode RenderMode.InteractiveServer
+
+<h2>EMPLOYEES</h2>
+
+@if (showFilters)
+{
+    <div class="filter-section">
+        <h4>Filters</h4>
+        <div class="form-group">
+            <label for="idFilterMin">Employee ID Min:</label>
+            <input type="number" class="form-control" id="idFilterMin" @bind-value="@idFilterMin" />
+        </div>
+        <div class="form-group">
+            <label for="idFilterMax">Employee ID Max:</label>
+            <input type="number" class="form-control" id="idFilterMax" @bind-value="@idFilterMax" />
+        </div>
+        <button class="btn btn-primary mt-3 mb-3 shadow" @onclick="ApplyFilters">Apply Filters</button>
+        <button class="btn btn-secondary shadow" @onclick="ResetFilters">Reset Filters</button>
+    </div>
+}
+
+<button class="btn btn-info text-white shadow" @onclick="ToggleFilters">@(showFilters ? "Hide Filters" : "Show Filters")</button>
+
+@if (filteredEmployees == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th @onclick="@(() => SortBy("Id"))" style="cursor: pointer">Employee Id</th>
+                <th @onclick="@(() => SortBy("FirstName"))" style="cursor: pointer">First Name</th>
+                <th @onclick="@(() => SortBy("Surname"))" style="cursor: pointer">Surname</th>
+                <th @onclick="@(() => SortBy("MiddleName"))" style="cursor: pointer">Middle Name</th>
+                <th @onclick="@(() => SortBy("Email"))" style="cursor: pointer">Email</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var employee in filteredEmployees ?? employees)
+            {
+                <tr>
+                    <td>@employee.Id</td>
+                    <td>@employee.FirstName</td>
+                    <td>@employee.Surname</td>
+                    @if (string.IsNullOrEmpty(employee.MiddleName))
+                    {
+                        <td>\[Field is Empty\]</td>
+                    }
+                    else
+                    {
+                        <td>@employee.MiddleName</td>
+                    }
+                    <td>@employee.Email</td>
+                    <td>
+                        <button class="btn btn-primary">
+                            <a href="@($"/editemployee")" style="color: white; text-decoration: none;">Edit</a>
+                        </button>
+                        <button class="btn btn-danger" @onclick="@(() => DeleteEmployee(employee.Id))">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <button class="btn btn-secondary shadow" @onclick="ResetSorting">Reset Sorting</button>
+    <p class="mt-2" style="transform: skew(-10deg); opacity: 0.5;">To sort just click on the column header ^_^</p>
+}
+
+@code {
+    private List<Employee> employees;
+    private List<Employee> filteredEmployees;
+    private string sortColumn;
+    private bool sortAscending = true;
+
+    private int? idFilterMin;
+    private int? idFilterMax;
+    private bool showFilters = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        employees = await Http.GetFromJsonAsync<List<Employee>>("api/Employee/GetAll");
+        filteredEmployees = employees;
+    }
+
+    private async Task DeleteEmployee(int employeeId)
+    {
+        var response = await Http.DeleteAsync($"api/Employee/Delete/{employeeId}");
+        if (response.IsSuccessStatusCode)
+        {
+            employees.RemoveAll(e => e.Id == employeeId);
+            ApplyFilters();
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        filteredEmployees = employees.Where(e =>
+            (idFilterMin == null || e.Id >= idFilterMin) &&
+            (idFilterMax == null || e.Id <= idFilterMax)
+        ).ToList();
+    }
+
+    private void ResetFilters()
+    {
+        idFilterMin = null;
+        idFilterMax = null;
+        filteredEmployees = employees;
+    }
+
+    private void SortBy(string columnName)
+    {
+        if (sortColumn == columnName)
+        {
+            sortAscending = !sortAscending;
+        }
+        else
+        {
+            sortColumn = columnName;
+            sortAscending = true;
+        }
+
+        SortEmployees();
+    }
+
+    private void SortEmployees()
+    {
+        switch (sortColumn)
+        {
+            case "Id":
+                filteredEmployees = sortAscending ? filteredEmployees.OrderBy(e => e.Id).ToList() : filteredEmployees.OrderByDescending(e => e.Id).ToList();
+                break;
+            case "FirstName":
+                filteredEmployees = sortAscending ? filteredEmployees.OrderBy(e => e.FirstName).ToList() : filteredEmployees.OrderByDescending(e => e.FirstName).ToList();
+                break;
+            case "Surname":
+                filteredEmployees = sortAscending ? filteredEmployees.OrderBy(e => e.Surname).ToList() : filteredEmployees.OrderByDescending(e => e.Surname).ToList();
+                break;
+            case "MiddleName":
+                filteredEmployees = sortAscending ? filteredEmployees.OrderBy(e => e.MiddleName).ToList() : filteredEmployees.OrderByDescending(e => e.MiddleName).ToList();
+                break;
+            case "Email":
+                filteredEmployees = sortAscending ? filteredEmployees.OrderBy(e => e.Email).ToList() : filteredEmployees.OrderByDescending(e => e.Email).ToList();
+                break;
+            default:
+                throw new ArgumentException($"Invalid column name: {sortColumn}");
+        }
+    }
+
+    private void ToggleFilters()
+    {
+        showFilters = !showFilters;
+    }
+
+    private async Task ResetSorting()
+    {
+        sortColumn = null;
+        sortAscending = true;
+        employees = await Http.GetFromJsonAsync<List<Employee>>("api/Employee/GetAll");
+        filteredEmployees = employees;
+    }
+}

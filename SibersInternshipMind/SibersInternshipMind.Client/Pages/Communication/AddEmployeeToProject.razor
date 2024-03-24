@@ -1,0 +1,80 @@
+﻿@page "/addemployeetoproject"
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@rendermode RenderMode.InteractiveServer
+
+<h3>Add Employee to Project</h3>
+
+<div class="form-group mb-3">
+    <label for="selectProject" class="form-label">Select Project:</label>
+    <select id="selectProject" class="form-select" @bind="SelectedProjectId">
+        <option value="0" class="text-dark">-- Select Project --</option>
+        @foreach (var project in Projects)
+        {
+            <option value="@project.Id">@project.Name (ID: @project.Id)</option>
+        }
+    </select>
+</div>
+
+<div class="form-group mb-3">
+    <label for="selectEmployee" class="form-label">Select Employee:</label>
+    <select id="selectEmployee" class="form-select" @bind="SelectedEmployeeId">
+        <option value="0">-- Select Employee --</option>
+        @foreach (var employee in Employees)
+        {
+            <option value="@employee.Id">@employee.FirstName @employee.Surname (ID: @employee.Id)</option>
+        }
+    </select>
+</div>
+
+<button type="button" class="btn btn-primary shadow" @onclick="AddEmployeeToProjectFunc" disabled="@(!IsSelectionValid())">Add Employee to Project</button>
+
+@code {
+    private List<Project> Projects = new List<Project>();
+    private List<Employee> Employees = new List<Employee>();
+    private int SelectedProjectId { get; set; }
+    private int SelectedEmployeeId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Projects = await Http.GetFromJsonAsync<List<Project>>("/api/Project/Get");
+        Employees = await Http.GetFromJsonAsync<List<Employee>>("/api/Employee/GetAll");
+    }
+
+    private async Task AddEmployeeToProjectFunc()
+    {
+        bool isEmployeeOnProject = await IsEmployeeAlreadyOnProject(SelectedProjectId, SelectedEmployeeId);
+
+        if (isEmployeeOnProject)
+        {
+            NavigationManager.NavigateTo("/duplicationerror");
+        }
+        else
+        {
+            var response = await Http.PostAsync($"/api/communication/AddEmployeeToProject?projectId={SelectedProjectId}&employeeId={SelectedEmployeeId}", null);
+
+            if (response.IsSuccessStatusCode)
+            {
+                NavigationManager.NavigateTo("/addedsuccess");
+            }
+            else
+            {
+                NavigationManager.NavigateTo("/Error");
+            }
+        }
+    }
+
+    private async Task<bool> IsEmployeeAlreadyOnProject(int projectId, int employeeId)
+    {
+        var response = await Http.GetAsync($"/api/communication/GetAllEmployeesFromProject?projectId={projectId}");
+        var allEmployees = await response.Content.ReadFromJsonAsync<List<Employee>>();
+
+        // Проверяем наличие сотрудника на проекте
+        return allEmployees != null && allEmployees.Any(e => e.Id == employeeId);
+    }
+
+    private bool IsSelectionValid()
+    {
+        return SelectedProjectId != 0 && SelectedEmployeeId != 0;
+    }
+}

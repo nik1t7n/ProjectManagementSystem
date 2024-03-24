@@ -1,0 +1,81 @@
+﻿@page "/createproject"
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@rendermode RenderMode.InteractiveServer
+
+<h3>Create Project</h3>
+
+<EditForm FormName="CreateProjectForm" Model="@project" OnValidSubmit="HandleSubmit">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <div class="form-group mb-3">
+        <label for="name">Name</label>
+        <InputText id="name" class="form-control" @bind-Value="project.Name" pattern="^[a-zA-Z0-9 ]+$" />
+    </div>
+
+    <div class="form-group mb-3">
+        <label for="clientCompany">Client Company</label>
+        <InputText id="clientCompany" class="form-control" @bind-Value="project.ClientCompany" pattern="^[a-zA-Z0-9 ]+$" />
+    </div>
+
+    <div class="form-group mb-3">
+        <label for="vendorCompany">Vendor Company</label>
+        <InputText id="vendorCompany" class="form-control" @bind-Value="project.VendorCompany" pattern="^[a-zA-Z0-9 ]+$" />
+    </div>
+
+    <div class="form-group mb-3">
+        <label for="managerId">Manager</label>
+        <select id="managerId" class="form-control" @bind="project.ManagerId">
+            <option value="0">-- Select Manager --</option>
+            @foreach (var employee in Employees)
+            {
+                <option value="@employee.Id">@employee.FirstName @employee.Surname</option>
+            }
+        </select>
+    </div>
+
+    <div class="form-group mb-3">
+        <label for="startDate">Start Date</label>
+        <InputDate id="startDate" class="form-control" @bind-Value="project.StartDate" />
+    </div>
+
+    <div class="form-group mb-3">
+        <label for="endDate">End Date</label>
+        <InputDate id="endDate" class="form-control" @bind-Value="project.EndDate" />
+    </div>
+
+    <div class="form-group">
+        <label for="priority">Priority</label>
+        <InputNumber id="priority" class="form-control" @bind-Value="project.Priority" min="0" />
+    </div>
+
+    <button type="submit" class="btn btn-primary mt-3 mb-3 shadow">Create</button>
+</EditForm>
+
+@code {
+    private List<Employee> Employees = new List<Employee>(); // Список существующих работников
+
+    private ProjectDTO project = new ProjectDTO();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Загрузка существующих работников для выбора менеджера
+        Employees = await Http.GetFromJsonAsync<List<Employee>>("/api/Employee/GetAll");
+    }
+
+    private async Task HandleSubmit()
+    {
+        var response = await Http.PostAsJsonAsync("api/Project/Add", project);
+        var result = await response.Content.ReadAsStringAsync();
+
+        if (response.IsSuccessStatusCode)
+        {
+            NavigationManager.NavigateTo("/createdprojectsuccess");
+        }
+        else
+        {
+            NavigationManager.NavigateTo("/createdprojecterror");
+        }
+    }
+}

@@ -1,0 +1,228 @@
+﻿@page "/projects"
+@inject HttpClient Http
+@rendermode RenderMode.InteractiveServer
+
+<h2 class="font-weight-bold">PROJECTS</h2>
+
+@if (showFilters)
+{
+    <div class="filter-section">
+        <h4>Filters</h4>
+        <div class="form-group mb-2">
+            <label for="idFilterMin">Project ID Min:</label>
+            <input type="number" class="form-control" id="idFilterMin" @bind-value="@idFilterMin" />
+        </div>
+        <div class="form-group mb-2">
+            <label for="idFilterMax">Project ID Max:</label>
+            <input type="number" class="form-control" id="idFilterMax" @bind-value="@idFilterMax" />
+        </div>
+        <div class="form-group mb-2">
+            <label for="startDateFilterMin">Start Date Min:</label>
+            <input type="date" class="form-control" id="startDateFilterMin" @bind-value="@startDateFilterMin" />
+        </div>
+        <div class="form-group mb-2">
+            <label for="startDateFilterMax">Start Date Max:</label>
+            <input type="date" class="form-control" id="startDateFilterMax" @bind-value="@startDateFilterMax" />
+        </div>
+        <div class="form-group mb-2">
+            <label for="priorityFilterMin">Priority Min:</label>
+            <input type="number" class="form-control" id="priorityFilterMin" @bind-value="@priorityFilterMin" />
+        </div>
+        <div class="form-group">
+            <label for="priorityFilterMax">Priority Max:</label>
+            <input type="number" class="form-control" id="priorityFilterMax" @bind-value="@priorityFilterMax" />
+        </div>
+        <button class="btn btn-primary mt-3 mb-3 shadow" @onclick="ApplyFilters">Apply Filters</button>
+        <button class="btn btn-secondary shadow" @onclick="ResetFilters">Reset Filters</button>
+    </div>
+}
+
+<button class="btn btn-info text-white shadow" @onclick="ToggleFilters">@(showFilters ? "Hide Filters" : "Show Filters")</button>
+
+
+@if (filteredProjects == null)
+{
+    <p>Loading...</p>
+}
+else
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th @onclick="@(() => SortBy("Id"))" style="cursor: pointer">Project ID</th>
+                <th @onclick="@(() => SortBy("Name"))" style="cursor: pointer">Name</th>
+                <th @onclick="@(() => SortBy("ClientCompany"))" style="cursor: pointer">Client Company</th>
+                <th @onclick="@(() => SortBy("VendorCompany"))" style="cursor: pointer">Vendor Company</th>
+                <th @onclick="@(() => SortBy("ManagerId"))" style="cursor: pointer">Manager</th>
+                <th @onclick="@(() => SortBy("StartDate"))" style="cursor: pointer">Start Date</th>
+                <th @onclick="@(() => SortBy("EndDate"))" style="cursor: pointer">End Date</th>
+                <th @onclick="@(() => SortBy("Priority"))" style="cursor: pointer">Priority</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var project in filteredProjects ?? projects)
+            {
+                <tr>
+                    <td>@project.Id</td>
+                    <td>@project.Name</td>
+                    <td>@project.ClientCompany</td>
+                    <td>@project.VendorCompany</td>
+                    <td>@(GetManagerName(project.ManagerId)) (ID: @project.ManagerId)</td>
+                    <td>@project.StartDate.ToString("yyyy-MM-dd")</td>
+                    <td>@project.EndDate.ToString("yyyy-MM-dd")</td>
+                    <td>@project.Priority</td>
+                    <td>
+                        <button class="btn btn-primary">
+                            <a href="@($"/editproject/{project.Id}")" style="color: white; text-decoration: none;">Edit</a>
+                        </button>
+                        <button class="btn btn-danger" @onclick="@(() => DeleteProject(project.Id))">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    <button class="btn btn-secondary shadow" @onclick="ResetSort">Reset Sorting</button>
+    <p class="mt-2" style="transform: skew(-10deg); opacity: 0.5;">To sort just click on the column header ^_^</p>
+}
+
+@code {
+    private List<Project> projects;
+    private string sortColumn;
+    private bool sortAscending = true;
+
+    private int? idFilterMin;
+    private int? idFilterMax;
+    private DateTime? startDateFilterMin;
+    private DateTime? startDateFilterMax;
+    private int? priorityFilterMin;
+    private int? priorityFilterMax;
+    private List<Project> filteredProjects;
+    private bool showFilters = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        projects = await Http.GetFromJsonAsync<List<Project>>("api/Project/Get");
+        filteredProjects = projects;
+    }
+
+    private async Task DeleteProject(int projectId)
+    {
+        var response = await Http.DeleteAsync($"api/Project/Delete/{projectId}");
+        if (response.IsSuccessStatusCode)
+        {
+            projects.RemoveAll(p => p.Id == projectId);
+            ApplyFilters();
+        }
+    }
+
+    private string GetManagerName(int managerId)
+    {
+        try
+        {
+            var response = Http.GetAsync($"api/Employee/GetById/{managerId}").Result;
+            if (response.IsSuccessStatusCode)
+            {
+                var manager = response.Content.ReadFromJsonAsync<Employee>().Result;
+                return $"{manager.FirstName} {manager.Surname}";
+            }
+            else
+            {
+                return "Not Found";
+            }
+        }
+        catch (Exception ex)
+        {
+            return "Error: " + ex.Message;
+        }
+    }
+
+    private void SortBy(string columnName)
+    {
+        if (sortColumn == columnName)
+        {
+            sortAscending = !sortAscending;
+        }
+        else
+        {
+            sortColumn = columnName;
+            sortAscending = true;
+        }
+
+        SortProjects();
+    }
+
+    private void SortProjects()
+    {
+        switch (sortColumn)
+        {
+            case "Id":
+                filteredProjects = sortAscending ? filteredProjects.OrderBy(p => p.Id).ToList() : filteredProjects.OrderByDescending(p => p.Id).ToList();
+                break;
+            case "Name":
+                filteredProjects = sortAscending ? filteredProjects.OrderBy(p => p.Name).ToList() : filteredProjects.OrderByDescending(p => p.Name).ToList();
+                break;
+            case "ClientCompany":
+                filteredProjects = sortAscending ? filteredProjects.OrderBy(p => p.ClientCompany).ToList() : filteredProjects.OrderByDescending(p => p.ClientCompany).ToList();
+                break;
+            case "VendorCompany":
+                filteredProjects = sortAscending ? filteredProjects.OrderBy(p => p.VendorCompany).ToList() : filteredProjects.OrderByDescending(p => p.VendorCompany).ToList();
+                break;
+            case "ManagerId":
+                filteredProjects = sortAscending ? filteredProjects.OrderBy(p => p.ManagerId).ToList() : filteredProjects.OrderByDescending(p => p.ManagerId).ToList();
+                break;
+            case "StartDate":
+                filteredProjects = sortAscending ? filteredProjects.OrderBy(p => p.StartDate).ToList() : filteredProjects.OrderByDescending(p => p.StartDate).ToList();
+                break;
+            case "EndDate":
+                filteredProjects = sortAscending ? filteredProjects.OrderBy(p => p.EndDate).ToList() : filteredProjects.OrderByDescending(p => p.EndDate).ToList();
+                break;
+            case "Priority":
+                filteredProjects = sortAscending ? filteredProjects.OrderBy(p => p.Priority).ToList() : filteredProjects.OrderByDescending(p => p.Priority).ToList();
+                break;
+            default:
+                throw new ArgumentException($"Invalid column name: {sortColumn}");
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        filteredProjects = projects.Where(p =>
+            (idFilterMin == null || p.Id >= idFilterMin) &&
+            (idFilterMax == null || p.Id <= idFilterMax) &&
+            (startDateFilterMin == null || p.StartDate >= startDateFilterMin) &&
+            (startDateFilterMax == null || p.StartDate <= startDateFilterMax) &&
+            (priorityFilterMin == null || p.Priority >= priorityFilterMin) &&
+            (priorityFilterMax == null || p.Priority <= priorityFilterMax)
+        ).ToList();
+    }
+
+    private async void ResetSort()
+    {
+        sortColumn = null;
+        idFilterMin = null;
+        idFilterMax = null;
+        startDateFilterMin = null;
+        startDateFilterMax = null;
+        priorityFilterMin = null;
+        priorityFilterMax = null;
+        projects = await Http.GetFromJsonAsync<List<Project>>("api/Project/Get");
+        filteredProjects = projects;
+    }
+
+    private void ResetFilters()
+    {
+        idFilterMin = null;
+        idFilterMax = null;
+        startDateFilterMin = null;
+        startDateFilterMax = null;
+        priorityFilterMin = null;
+        priorityFilterMax = null;
+        filteredProjects = projects;
+    }
+
+    private void ToggleFilters()
+    {
+        showFilters = !showFilters;
+    }
+}

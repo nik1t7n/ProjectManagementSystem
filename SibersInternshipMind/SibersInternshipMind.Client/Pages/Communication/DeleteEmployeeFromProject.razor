@@ -1,0 +1,65 @@
+﻿@page "/deleteemployeefromproject"
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@rendermode RenderMode.InteractiveServer
+
+<h3 class="mb-3">Delete Employee from Project</h3>
+
+<div class="form-group mb-3">
+    <label for="selectProject">Select Project:</label>
+    <select id="selectProject" class="form-control" @bind="SelectedProjectId" @oninput="LoadEmployeesForProject">
+        <option value="0">-- Select Project --</option>
+        @foreach (var project in Projects)
+        {
+            <option value="@project.Id">@project.Name (ID: @project.Id)</option>
+        }
+    </select>
+</div>
+
+@if (SelectedProjectId != 0)
+{
+    <div class="form-group mb-3">
+        <label for="selectEmployee">Select Employee:</label>
+        <select id="selectEmployee" class="form-control" @bind="SelectedEmployeeId">
+            <option value="0">-- Select Employee --</option>
+            @foreach (var employee in Employees)
+            {
+                <option value="@employee.Id">@employee.FirstName @employee.Surname</option>
+            }
+        </select>
+    </div>
+}
+
+<button type="button" class="btn btn-danger shadow" @onclick="DeleteEmployeeFromProjectFunc" disabled="@(SelectedProjectId == 0 || SelectedEmployeeId == 0)">Delete Employee from Project</button>
+
+@code {
+    private List<Project> Projects = new List<Project>();
+    private List<Employee> Employees = new List<Employee>();
+    private int SelectedProjectId { get; set; }
+    private int SelectedEmployeeId { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Projects = await Http.GetFromJsonAsync<List<Project>>("/api/Project/Get");
+    }
+
+    private async Task LoadEmployeesForProject(ChangeEventArgs e)
+    {
+        SelectedProjectId = Convert.ToInt32(e.Value);
+        Employees = await Http.GetFromJsonAsync<List<Employee>>($"/api/communication/GetAllEmployeesFromProject?projectId={SelectedProjectId}");
+    }
+
+    private async Task DeleteEmployeeFromProjectFunc()
+    {
+        var response = await Http.DeleteAsync($"/api/communication/DeleteEmployeeFromProject?projectId={SelectedProjectId}&employeeId={SelectedEmployeeId}");
+
+        if (response.IsSuccessStatusCode)
+        {
+            NavigationManager.NavigateTo("/deletedsuccess");
+        }
+        else
+        {
+            NavigationManager.NavigateTo("/deletederror");
+        }
+    }
+}

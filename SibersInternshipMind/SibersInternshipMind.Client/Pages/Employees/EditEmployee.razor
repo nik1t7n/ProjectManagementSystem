@@ -1,0 +1,168 @@
+﻿@page "/editemployee"
+@inject HttpClient Http
+@inject NavigationManager NavigationManager
+@rendermode RenderMode.InteractiveServer
+
+<h3>Edit Employee</h3>
+
+@if (employees == null)
+{
+    <p>Loading employees...</p>
+}
+else
+{
+    <div class="form-group mb-2">
+        <label for="selectEmployee">Select an employee to edit:</label>
+        <select id="selectEmployee" @bind="selectedEmployeeId" class="form-control" @oninput="OnEmployeeSelected">
+            @foreach (var employee in employees)
+            {
+                <option value="@employee.Id">@employee.FirstName @employee.Surname (ID: @employee.Id)</option>
+            }
+        </select>
+    </div>
+
+    @if (selectedEmployee != null)
+    {
+        <EditForm Model="@selectedEmployee" OnValidSubmit="HandleSubmit">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+
+            <div class="form-group mb-2">
+                <label for="firstName">First Name</label>
+                <InputText id="firstName" class="form-control" @bind-Value="selectedEmployee.FirstName" @oninput="HandleFieldChanged" pattern="[A-Za-z]+" />
+            </div>
+
+            <div class="form-group mb-2">
+                <label for="surname">Surname</label>
+                <InputText id="surname" class="form-control" @bind-Value="selectedEmployee.Surname" @oninput="HandleFieldChanged" pattern="[A-Za-z]+" />
+            </div>
+
+            <div class="form-group mb-2">
+                <label for="middleName">Middle Name</label>
+                <InputText id="middleName" class="form-control" @bind-Value="selectedEmployee.MiddleName" @oninput="HandleFieldChanged" pattern="[A-Za-z]+" />
+                @if (string.IsNullOrWhiteSpace(selectedEmployee.MiddleName))
+                {
+                    <p style="color: red">[Field is Empty]</p>
+                }
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <InputText id="email" class="form-control" @bind-Value="selectedEmployee.Email" @oninput="HandleFieldChanged" />
+                @if (!string.IsNullOrWhiteSpace(selectedEmployee.Email) && !IsValidEmail(selectedEmployee.Email))
+                {
+                    <p style="color: red;">Please enter a valid email address.</p>
+                }
+            </div>
+
+            <button type="submit" class="btn btn-primary mt-3 mb-2 shadow" disabled="@(employeeUnchanged)">Save</button>
+            @if (employeeUnchanged)
+            {
+                <p style="color: #7469B6;">You cannot click the "Save" button because you have not changed anything yet ^_^</p>
+            }
+        </EditForm>
+    }
+}
+
+@code {
+    private List<Employee> employees;
+    private int selectedEmployeeId;
+    private Employee selectedEmployee;
+    private Employee originalEmployee;
+    private bool employeeUnchanged = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Fetch existing employees from the server
+        employees = await Http.GetFromJsonAsync<List<Employee>>("api/Employee/GetAll");
+
+        // Initialize selectedEmployeeId with the first employee in the list
+        if (employees != null && employees.Count > 0)
+        {
+            selectedEmployeeId = employees[0].Id;
+            await LoadSelectedEmployee();
+        }
+    }
+
+    private async Task LoadSelectedEmployee()
+    {
+        // Fetch selected employee from the server
+        selectedEmployee = await Http.GetFromJsonAsync<Employee>($"api/Employee/GetById/{selectedEmployeeId}");
+        originalEmployee = new Employee
+            {
+                Id = selectedEmployee.Id,
+                FirstName = selectedEmployee.FirstName,
+                Surname = selectedEmployee.Surname,
+                MiddleName = selectedEmployee.MiddleName,
+                Email = selectedEmployee.Email
+            };
+        employeeUnchanged = true;
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (!employeeUnchanged)
+        {
+            var response = await Http.PutAsJsonAsync($"api/Employee/Update/{selectedEmployeeId}", selectedEmployee);
+            var result = await response.Content.ReadAsStringAsync();
+
+            if (response.IsSuccessStatusCode)
+            {
+                NavigationManager.NavigateTo("/employees");
+            }
+            else
+            {
+                Console.WriteLine(response);
+                NavigationManager.NavigateTo("/Error");
+            }
+        }
+    }
+
+    private async Task OnEmployeeSelected(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value.ToString(), out int employeeId))
+        {
+            selectedEmployeeId = employeeId;
+            await LoadSelectedEmployee();
+        }
+    }
+
+    private void HandleFieldChanged(ChangeEventArgs e)
+    {
+        employeeUnchanged = false;
+
+        // Here we update the selected employee whenever any field value changes
+        // This will automatically reflect the changes in the selectedEmployee object
+        switch (e.Value.ToString())
+        {
+            case "firstName":
+                selectedEmployee.FirstName = e.Value.ToString();
+                break;
+            case "surname":
+                selectedEmployee.Surname = e.Value.ToString();
+                break;
+            case "middleName":
+                selectedEmployee.MiddleName = e.Value.ToString();
+                break;
+            case "email":
+                selectedEmployee.Email = e.Value.ToString();
+                break;
+            default:
+                // Handle other field changes if necessary
+                break;
+        }
+    }
+
+    private bool IsValidEmail(string email)
+    {
+        try
+        {
+            var addr = new System.Net.Mail.MailAddress(email);
+            return addr.Address == email;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+}

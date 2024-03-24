@@ -1,0 +1,85 @@
+﻿@page "/getalldocuments"
+@inject HttpClient Http
+@rendermode RenderMode.InteractiveServer
+
+<h3>Get All Documents</h3>
+
+<div class="form-group">
+    <label for="selectProject">Select a project:</label>
+    <select id="selectProject" @bind="selectedProjectId" class="form-control" @oninput="LoadDocumentsForProjectFunc">
+        <option value="0">-- Select Project --</option>
+        @foreach (var project in projects)
+        {
+            <option value="@project.Id">@project.Name</option>
+        }
+    </select>
+</div>
+
+@if (selectedProjectId != 0 && documents != null && documents.Any())
+{
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Document Name</th>
+                <th>File Path</th>
+                <th>File Type</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var document in documents)
+            {
+                <tr>
+                    <td>@document.Name</td>
+                    <td>
+                        <a href="@document.FilePath" target="_blank" class="btn btn-primary" title="@document.FilePath">Open File</a>
+                    </td>
+                    <td>@document.FileType</td>
+                    <td>
+                        <button class="btn btn-danger" @onclick="() => DeleteDocument(document.Id)">Delete</button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else if (selectedProjectId != 0)
+{
+    <p>No documents found for the selected project.</p>
+}
+
+<hr class="dropdown-divider">
+
+@code {
+    private List<Project> projects = new List<Project>();
+    private int selectedProjectId;
+    private List<Document> documents;
+
+    protected override async Task OnInitializedAsync()
+    {
+        projects = await Http.GetFromJsonAsync<List<Project>>("/api/Project/Get");
+    }
+
+    private async Task LoadDocumentsForProjectFunc(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int projectId))
+        {
+            selectedProjectId = projectId;
+            documents = await Http.GetFromJsonAsync<List<Document>>($"/api/Document/GetAllDocumentsOfOneProject/{selectedProjectId}");
+        }
+    }
+
+    private async Task DeleteDocument(int documentId)
+    {
+        var response = await Http.DeleteAsync($"/api/Document/Delete/{documentId}");
+        if (response.IsSuccessStatusCode)
+        {
+            // Reload documents after deletion
+            documents = await Http.GetFromJsonAsync<List<Document>>($"/api/Document/GetAllDocumentsOfOneProject/{selectedProjectId}");
+        }
+        else
+        {
+            // Handle deletion failure
+        }
+    }
+}
