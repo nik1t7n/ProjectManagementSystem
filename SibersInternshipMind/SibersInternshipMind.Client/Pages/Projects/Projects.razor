@@ -74,7 +74,7 @@ else
                     <td>@project.Priority</td>
                     <td>
                         <button class="btn btn-primary">
-                            <a href="@($"/editproject/{project.Id}")" style="color: white; text-decoration: none;">Edit</a>
+                            <a href="@($"/editproject")" style="color: white; text-decoration: none;">Edit</a>
                         </button>
                         <button class="btn btn-danger" @onclick="@(() => DeleteProject(project.Id))">Delete</button>
                     </td>
