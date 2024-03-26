@@ -3,6 +3,17 @@
 ## Overview
 This project is a web application designed for managing projects, employees, and documents within a company. It provides functionalities for adding, updating, and deleting projects and employees, as well as managing project-related documents. The application also allows for communication between employees and project management.
 
+## Usage
+To open and run this project, follow these steps:
+
+1. Open the solution file in your preferred IDE (Visual Studio, Rider, etc.).
+2. Locate the `appsettings.json` file and update the connection string with the appropriate values for your database server.
+3. Open the Package Manager Console or Terminal in your IDE.
+4. Run the command `dotnet ef migrations add [NameOfYourMigration]` to create an initial migration for your database schema.
+5. Run the command `dotnet ef database update` to apply the initial migration and create the database schema.
+6. Build the solution to ensure there are no errors.
+7. Run the project by pressing the appropriate Run button or by executing the `dotnet run` command in the Terminal.
+
 ## Features
 - **Project Management**: Add, update, and delete projects with details such as name, start date, end date, priority, and associated employees.
 - **Employee Management**: Manage employee information including first name, surname, middle name, and email address.
