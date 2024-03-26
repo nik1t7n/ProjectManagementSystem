@@ -64,7 +64,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Employees = await Http.GetFromJsonAsync<List<Employee>>("/api/Employee/GetAll"); // Загрузка всех работников
+        Employees = await Http.GetFromJsonAsync<List<Employee>>("/api/Employee/GetAll"); // get all employees
     }
 
     private async Task LoadProjects(ChangeEventArgs e)
@@ -75,20 +75,20 @@
             var response = await Http.GetAsync($"/api/communication/GetAllProjectsOfOneEmployee?employeeId={SelectedEmployeeId}");
             if (response.IsSuccessStatusCode)
             {
-                Projects = await response.Content.ReadFromJsonAsync<List<Project>>(); // Загрузка проектов для выбранного работника
+                Projects = await response.Content.ReadFromJsonAsync<List<Project>>(); // get all projects for specified employee
                 foreach (var project in Projects)
                 {
-                    await LoadProjectManager(project); // Загрузка информации о менеджере для каждого проекта
+                    await LoadProjectManager(project); // load a manager for each project
                 }
             }
             else
             {
-                Projects = new List<Project>(); // Обнуляем список проектов, если запрос не успешен
+                Projects = new List<Project>(); // reset projects list if unsuccess
             }
         }
         else
         {
-            Projects = new List<Project>(); // Обнуляем список проектов, если не выбран работник
+            Projects = new List<Project>(); // reset projects list if an employee is not chosen
         }
     }
 

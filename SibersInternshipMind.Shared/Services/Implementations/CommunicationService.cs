@@ -48,13 +48,13 @@ namespace SibersInternshipMind.Shared.Services.Implementations
 
         public List<Employee> GetAllEmployeesFromProject(int projectId)
         {
-            // Находим все записи в таблице ActiveProject, где ProjectId равен указанному projectId
+            // find all records in the table ActiveProject, where ProjectId equals specified projectId
             var activeProjects = _dataContext.ActiveProjects.Where(ap => ap.ProjectId == projectId).ToList();
 
-            // Создаем список для хранения работников
+            // create a list to store employees
             var employees = new List<Employee>();
 
-            // Для каждой записи в таблице ActiveProject находим работника по его EmployeeId и добавляем его в список
+            // to each record in table ActiveProject find employee by his EmployeeId and add him to the List
             foreach (var activeProject in activeProjects)
             {
                 var employee = _employeeService.GetEmployeeById(activeProject.EmployeeId);
@@ -69,13 +69,10 @@ namespace SibersInternshipMind.Shared.Services.Implementations
 
         public List<Project> GetAllProjectsOfOneEmployee(int employeeId)
         {
-            // Находим все записи в таблице ActiveProject, где EmployeeId равен указанному employeeId
             var activeProjects = _dataContext.ActiveProjects.Where(ap => ap.EmployeeId == employeeId).ToList();
 
-            // Создаем список для хранения проектов
             var projects = new List<Project>();
 
-            // Для каждой записи в таблице ActiveProject добавляем проект в список (если его еще нет)
             foreach (var activeProject in activeProjects)
             {
                 var project = _projectService.GetProjectById(activeProject.ProjectId);

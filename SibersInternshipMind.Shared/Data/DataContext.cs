@@ -12,13 +12,12 @@ namespace SibersInternshipMind.Shared.Data
         public DbSet<Employee> Employees { get; set; }
         public DbSet<Project> Projects { get; set; }
         public DbSet<ActiveProject> ActiveProjects { get; set; }
-        public DbSet<Document> Documents { get; set; } // Добавляем DbSet для сущности Document
+        public DbSet<Document> Documents { get; set; } 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
 
-            // Здесь может быть логика настройки модели, если это необходимо
         }
     }
 }

@@ -1,5 +1,6 @@
 ﻿@page "/getalldocuments"
 @inject HttpClient Http
+@inject NavigationManager NavigationManager
 @rendermode RenderMode.InteractiveServer
 
 <h3>Get All Documents</h3>
@@ -79,7 +80,7 @@ else if (selectedProjectId != 0)
         }
         else
         {
-            // Handle deletion failure
+            NavigationManager.NavigateTo("/Error");
         }
     }
 }

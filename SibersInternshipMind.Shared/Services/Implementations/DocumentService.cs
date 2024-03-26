@@ -54,7 +54,7 @@ namespace SibersInternshipMind.Shared.Services.Implementations
 
         public List<Document> GetAllDocumentsOfOneProject(int projectId)
         {
-            // Получаем все документы с заданным projectId
+            // get all documents with specified projectId
             var documentsOfProject = _context.Documents.Where(d => d.ProjectId == projectId).ToList();
             return documentsOfProject;
         }

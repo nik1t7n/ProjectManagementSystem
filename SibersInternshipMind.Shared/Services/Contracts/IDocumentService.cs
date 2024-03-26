@@ -5,7 +5,6 @@ namespace SibersInternshipMind.Shared.Services.Contracts
 {
     public interface IDocumentService
     {
-        // Методы для работы с документами
         List<Document> GetAllDocuments();
         Document GetDocumentById(int id);
         bool AddDocument(DocumentDTO documentDto);

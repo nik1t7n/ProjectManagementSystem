@@ -54,13 +54,12 @@
 </EditForm>
 
 @code {
-    private List<Employee> Employees = new List<Employee>(); // Список существующих работников
+    private List<Employee> Employees = new List<Employee>(); 
 
     private ProjectDTO project = new ProjectDTO();
 
     protected override async Task OnInitializedAsync()
     {
-        // Загрузка существующих работников для выбора менеджера
         Employees = await Http.GetFromJsonAsync<List<Employee>>("/api/Employee/GetAll");
     }
 

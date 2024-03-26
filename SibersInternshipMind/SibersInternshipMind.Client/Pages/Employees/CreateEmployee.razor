@@ -55,7 +55,6 @@
     {
         if (!IsValidEmail(employee.Email))
         {
-            // Show error message
             return;
         }
 
@@ -87,7 +86,6 @@
 
     private bool IsValidName(string name)
     {
-        // Проверяем, что имя состоит только из букв
         return !string.IsNullOrWhiteSpace(name) && name.All(char.IsLetter);
     }
 }
