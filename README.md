@@ -40,4 +40,4 @@ To sort just click on the column header ^_^
 Error handling is crucial for providing a smooth user experience. Custom error pages are stored in the States folder, and users are redirected to these pages in case of an error to ensure that they receive informative feedback and guidance.
 
 ## Project Demostration
-You can check all of screenshots in the `Images` folder.
+You can check all of screenshots in the `ProjectDemonstration.md` folder.
